@@ -113,12 +113,15 @@ export async function findObject(
   core.debug("Restore keys: " + JSON.stringify(restoreKeys));
 
   core.debug(`Finding exact macth for: ${key}`);
-  const exactMatch = await listObjects(mc, bucket, key);
-  core.debug(`Found ${JSON.stringify(exactMatch, null, 2)}`);
-  if (exactMatch.length) {
-    const result = { item: exactMatch[0], matchingKey: key };
-    core.debug(`Using ${JSON.stringify(result)}`);
-    return result;
+  const keyMatches = await listObjects(mc, bucket, key);
+  core.debug(`Found ${JSON.stringify(keyMatches, null, 2)}`);
+  if (keyMatches.length > 0) {
+    const exactMatch = keyMatches.find((obj) => obj.name === key)
+    if (exactMatch) {
+      const result = { item: exactMatch, matchingKey: key };
+      core.debug(`Using ${JSON.stringify(result)}`);
+      return result;
+    }
   }
 
   for (const restoreKey of restoreKeys) {
@@ -127,7 +130,7 @@ export async function findObject(
     let objects = await listObjects(mc, bucket, restoreKey);
     objects = objects.filter((o) => o.name.includes(fn));
     core.debug(`Found ${JSON.stringify(objects, null, 2)}`);
-    if (objects.length < 1) {
+    if (objects.length == 0) {
       continue;
     }
     const sorted = objects.sort(
